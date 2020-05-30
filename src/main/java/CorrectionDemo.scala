@@ -55,6 +55,8 @@ object CorrectionDemo {
          */
 
     }
+
+    //将编辑距离符合要求的词筛选出来
     def caculateDis(word:String): mutable.HashMap[String,List[Int]] ={
         val reWords:mutable.HashMap[String,List[Int]]=mutable.HashMap()
         val generator=Generator
@@ -64,7 +66,7 @@ object CorrectionDemo {
             if(generator.minDistance(word,strs(0))<3) {
                 val list: ListBuffer[Int] = ListBuffer()
                 strs(1).split(" ").foreach(i => {
-                    if(i!="") list.addOne(i.toInt)
+                    if(i!="") list.addOne(i.toInt)//该词属于哪个节目，把节目号记录上
                 })
                 reWords.put(strs(0), list.toList)
             }
@@ -73,6 +75,7 @@ object CorrectionDemo {
         reWords
     }
 
+    //整合map
     def mergeRes(results:ListBuffer[mutable.HashMap[String,List[Int]]]): ListBuffer[String] ={
         val res:ListBuffer[String]=ListBuffer()
         val list:ListBuffer[ListBuffer[Int]]=ListBuffer()
@@ -88,7 +91,7 @@ object CorrectionDemo {
             if(count!=0) {
                 val strs:Array[String]=line.split(",")
                 var flag=true
-                list.foreach(i=>{
+                list.foreach(i=>{//该节目如果同时是输入的所有的词所关联的话，那么反馈给用户
                     if(!i.contains(strs(0).toInt)) flag=false
                 })
                 if(flag) res.addOne(strs(2))
@@ -96,8 +99,7 @@ object CorrectionDemo {
             count=1
         }
         bufferedSource.close()
-        res.foreach(i => println(i))
-
+        //res.foreach(i => println(i))
         res
     }
 }

@@ -11,7 +11,7 @@ object Simulation {
         createDic(prefix)
     }
 
-    def createDic(prefix:String): Unit ={
+    def createDic(prefix:String): Unit ={ //构建字典
         val bufferedSource = io.Source.fromFile(prefix+"netflix_titles.csv")
         val map:mutable.HashMap[String,ListBuffer[Int]]=mutable.HashMap()
         val punctuations=Array(":","!","\\(","\\)","&","\\+","-","\\*","\\/")

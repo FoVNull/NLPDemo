@@ -4,7 +4,7 @@ import scala.collection.mutable.ListBuffer
 object Generator {
     val results:mutable.HashSet[String]=mutable.HashSet()
 
-    def generateWord(word:String,count:Int): mutable.HashSet[String] ={
+    def generateWord(word:String,count:Int): mutable.HashSet[String] ={//生成编辑距离相近的词
         if(count>0){
             for(s <- delete(word)) generateWord(s,count-1)
             for(s <- insert(word)) generateWord(s,count-1)
@@ -60,7 +60,7 @@ object Generator {
         uRes
     }
 
-    def minDistance(word1: String, word2: String): Int = {
+    def minDistance(word1: String, word2: String): Int = { //计算编辑距离
         val len1=word1.length;val len2=word2.length
         val dp:Array[Array[Int]]=Array.ofDim[Int](len1+1, len2+1)
 
