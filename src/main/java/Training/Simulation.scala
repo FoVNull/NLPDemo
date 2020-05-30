@@ -1,7 +1,9 @@
 package Training
 
 import java.io.{File, PrintWriter}
+
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 object Simulation {
     def main(GL:Array[String]): Unit ={
@@ -11,22 +13,34 @@ object Simulation {
 
     def createDic(prefix:String): Unit ={
         val bufferedSource = io.Source.fromFile(prefix+"netflix_titles.csv")
-        val sets:mutable.HashSet[String]=mutable.HashSet()
-        val punctuations=Array(":","!","\\(","\\)","&")
+        val map:mutable.HashMap[String,ListBuffer[Int]]=mutable.HashMap()
+        val punctuations=Array(":","!","\\(","\\)","&","\\+","-","\\*","\\/")
+        var count = 0
         for (line <- bufferedSource.getLines) {
-            val cols = line.split(",").map(_.trim)
-            if(cols.length>2) {
-                var str=cols(2)
-                for(i <- punctuations) str=str.replaceAll(i,"")
-                val strs=str.split(" ")
-                strs.foreach(i => sets.add(i))
+            if(count!=0) {
+                val cols = line.split(",")
+                var str = cols(2)
+                for (i <- punctuations) str = str.replaceAll(i, "")
+                val strs = str.split(" ")
+                strs.foreach(i => {
+                    if(i!="") {
+                        val list: ListBuffer[Int] = map.getOrElse(i, ListBuffer())
+                        list.addOne(cols(0).toInt)
+                        map.put(i, list)
+                    }
+                })
             }
+            count=1
         }
         bufferedSource.close
 
         val writer = new PrintWriter(new File(prefix+"dictionary.csv" ))
         val stb:StringBuilder=new mutable.StringBuilder()
-        sets.foreach(x => stb.append(x+"\r\n"))
+        map.foreach(x => {
+            val temp=new mutable.StringBuilder()
+            x._2.foreach(i => temp.append(" "+i))
+            stb.append(x._1+","+temp+"\r\n")
+        })
         writer.write(stb.toString())
         writer.close()
     }

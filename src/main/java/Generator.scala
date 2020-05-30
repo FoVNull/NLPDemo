@@ -74,7 +74,8 @@ object Generator {
                 val ins = dp(i)(j-1) + 1
                 var upd = dp(i-1)(j-1)
                 //如果相同就不用+1了，这里用i-1,j-1是因为word长度和dp不一样
-                if(word1.charAt(i-1)!=word2.charAt(j-1)) upd+=1
+                if(word1.charAt(i-1)!=word2.charAt(j-1) &&
+                  word1.charAt(i-1).toLower!=word2.charAt(j-1).toLower) upd+=1
 
                 dp(i)(j)=Math.min(del,Math.min(ins,upd))
             }
