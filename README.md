@@ -2,6 +2,7 @@
 一些小练习，主要用的包是ScalaNLP，Tensorflow，dl4j
 <hr>
 #1 拼写纠正(CorrectionDemo.scala)<br>
+思路: http://hikki.top/2020/05/30/demo/ <br>
 20.05.30 beta.v1<br>
 以Netflix的节目单作为单词库，实现用户搜索节目时会对节目的拼写进行反馈，给出可能的节目名<br>
 首先建立词典，把节目名中的单词都扣下来，筛掉标点 &nbsp;&nbsp;|&nbsp;&nbsp; /Training/Simulation.scala<br>
