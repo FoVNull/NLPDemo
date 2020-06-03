@@ -1,13 +1,17 @@
 import java.awt.{Color, GridLayout}
 
-import javax.swing.event.{AncestorListener, DocumentEvent, DocumentListener}
-import javax.swing.{BorderFactory, JFrame, JPanel, JScrollPane, JTextArea, JTextField, JTextPane}
+import breeze.linalg.DenseMatrix
+import javax.swing.event.{DocumentEvent, DocumentListener}
+import javax.swing.{BorderFactory, JFrame, JPanel, JScrollPane, JTextArea, JTextPane}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.util.control.Breaks
 
 object CorrectionDemo {
     val prefix="D:/IntelliJ IDEA/IdeaProjects/NLPDemo/src/main/resources/"
+    val pro:mutable.Map[Int, Double] =Probability.caculate()
+    val disP:DenseMatrix[Double]=DenseMatrix((0.0,1.0,2.0),(1.0,0.55,0.1))
     def main(GL:Array[String]): Unit ={
         val frame:JFrame=new JFrame()
         val panel:JPanel=new JPanel()
@@ -24,13 +28,17 @@ object CorrectionDemo {
 
         input.getDocument.addDocumentListener(new DocumentListener {
             override def insertUpdate(e: DocumentEvent): Unit = {
-                val strs=input.getText().split(" ")
-                val results:ListBuffer[mutable.HashMap[String,List[Int]]]=ListBuffer()
-                for(i <- strs) results.addOne(caculateDis(i))
-                val res=mergeRes(results)
-                val stb=new StringBuilder
-                res.foreach(x=>stb.append(x+"\r\n"))
-                output.setText(stb.toString())
+                val check=checkDistance(input.getText())
+                if(!check.equals("")) output.setText(check)
+                else {
+                    val strs = input.getText().split(" ")
+                    val results: ListBuffer[mutable.HashMap[String, (List[Int], Double)]] = ListBuffer()
+                    for (i <- strs) results.addOne(caculateDis(i))
+                    val res = mergeRes(results)
+                    val stb = new StringBuilder
+                    res.toSeq.sortWith(_._2 > _._2).foreach(x => stb.append(x._1 + "\r\n"))
+                    output.setText(stb.toString())
+                }
             }
 
             override def removeUpdate(e: DocumentEvent): Unit = {}
@@ -44,31 +52,38 @@ object CorrectionDemo {
         frame.setDefaultCloseOperation(3)
         frame.setSize(400,300)
         frame.setLocationRelativeTo(null)
-        frame.setVisible(true)
+        //frame.setVisible(true)
 
-        /*
-        //val strs="norm of the noth".split(" ")
-        val strs="teracei house".split(" ")
-        val results:ListBuffer[mutable.HashMap[String,List[Int]]]=ListBuffer()
-        for(i <- strs) results.addOne(caculateDis(i))
-        mergeRes(results)
-         */
-
+        //控制台测试
+        val str="norm of the north"//"teracei house"
+        val strs=str.split(" ")
+        val check=checkDistance(str)
+        if(!check.equals("")) println(check)
+        else {
+            val results: ListBuffer[mutable.HashMap[String, (List[Int], Double)]] = ListBuffer()
+            for (i <- strs) results.addOne(caculateDis(i))
+            mergeRes(results).toSeq.sortWith(_._2 > _._2).foreach(x => println(x))
+        }
     }
 
     //将编辑距离符合要求的词筛选出来
-    def caculateDis(word:String): mutable.HashMap[String,List[Int]] ={
-        val reWords:mutable.HashMap[String,List[Int]]=mutable.HashMap()
+    def caculateDis(word:String): mutable.HashMap[String,(List[Int],Double)] ={
+        val reWords:mutable.HashMap[String,(List[Int],Double)]=mutable.HashMap()
         val generator=Generator
         val bufferedSource = io.Source.fromFile(prefix+"dictionary.csv")
         for (line <- bufferedSource.getLines) {
             val strs=line.split(",")
-            if(generator.minDistance(word,strs(0))<3) {
+            val distance=generator.minDistance(word,strs(0))
+            if(distance < 3) {
                 val list: ListBuffer[Int] = ListBuffer()
+                var p:Double=0
                 strs(1).split(" ").foreach(i => {
-                    if(i!="") list.addOne(i.toInt)//该词属于哪个节目，把节目号记录上
+                    if(i!="") {
+                        list.addOne(i.toInt)//该词属于哪个节目，把节目号记录上
+                        p+=pro(i.toInt)*disP(1,distance)//需要将所有出现c的节目的概率相加才能得到w和c之间的概率
+                    }
                 })
-                reWords.put(strs(0), list.toList)
+                reWords.put(strs(0), Tuple2(list.toList,p))
             }
         }
         bufferedSource.close()
@@ -76,30 +91,44 @@ object CorrectionDemo {
     }
 
     //整合map
-    def mergeRes(results:ListBuffer[mutable.HashMap[String,List[Int]]]): ListBuffer[String] ={
-        val res:ListBuffer[String]=ListBuffer()
-        val list:ListBuffer[ListBuffer[Int]]=ListBuffer()
+    def mergeRes(results:ListBuffer[mutable.HashMap[String,(List[Int],Double)]])
+    : mutable.HashMap[String,Double] ={
+        val res: mutable.HashMap[String, Double] = mutable.HashMap()
 
-        for(i <- results.indices) {
-            val temp:ListBuffer[Int]=ListBuffer()
-            results(i).foreach(x => {temp.addAll(x._2)})
-            list.addOne(temp)
-        }
         val bufferedSource = io.Source.fromFile(prefix+"netflix_titles.csv")
         var count=0
         for (line <- bufferedSource.getLines) {
             if(count!=0) {
                 val strs:Array[String]=line.split(",")
-                var flag=true
-                list.foreach(i=>{//该节目如果同时是输入的所有的词所关联的话，那么反馈给用户
-                    if(!i.contains(strs(0).toInt)) flag=false
-                })
-                if(flag) res.addOne(strs(2))
+                val id=strs(0).toInt
+                var flag=true;var p:Double=0
+                val loop:Breaks=Breaks
+                loop.breakable(results.foreach(map => {
+                    var subFlag=false
+                    map.foreach(entry=>{
+                        if(entry._2._1.contains(id)) {p+=entry._2._2;subFlag=true;}
+                    })
+                    if(!subFlag) {flag=false;loop.break()}
+                }))
+                if(flag) res.put(strs(2),p)
             }
             count=1
         }
         bufferedSource.close()
-        //res.foreach(i => println(i))
         res
+    }
+
+    def checkDistance(word:String): String ={
+        val bufferedSource = io.Source.fromFile(prefix+"netflix_titles.csv")
+        var count=0
+        for (line <- bufferedSource.getLines) {
+            val strs=line.split(",")
+            if(count>0){
+                if(Generator.minDistance(word,strs(2))==0) return strs(2)
+            }
+            count=1
+        }
+        bufferedSource.close()
+        ""
     }
 }
